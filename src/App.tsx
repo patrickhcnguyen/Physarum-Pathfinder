@@ -55,6 +55,8 @@ function App() {
     color: '#ffffff'
   })
 
+  const [showPanel, setShowPanel] = useState(true)  // State to track panel visibility
+
   // Initialize simulation only once
   useEffect(() => {
     if (!canvasRef.current) return
@@ -211,7 +213,24 @@ function App() {
         ref={canvasRef} 
         style={{ background: 'black' }}
       />
-      <ControlPanel config={config} setConfig={setConfig} />
+      <button 
+        className="panel-toggle"
+        onClick={() => setShowPanel(!showPanel)}
+        style={{
+          position: 'fixed',
+          top: '10px',
+          right: showPanel ? '310px' : '10px',
+          zIndex: 1000,
+          background: 'rgba(0, 0, 0, 0.8)',
+          color: 'white',
+          border: '1px solid white',
+          padding: '8px 12px',
+          cursor: 'pointer'
+        }}
+      >
+        {showPanel ? '→' : '←'}
+      </button>
+      {showPanel && <ControlPanel config={config} setConfig={setConfig} />}
     </div>
   )
 }
