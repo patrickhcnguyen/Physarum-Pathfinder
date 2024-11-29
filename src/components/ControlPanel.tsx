@@ -12,6 +12,8 @@ interface Config {
   diffusionRate: number
   resolution: number
   color: string
+  xMultiplier: number
+  yMultiplier: number
 }
 
 interface ControlPanelProps {
@@ -91,6 +93,30 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, setConfig }) => {
       </div>
 
       <div className="control-group">
+        <label>X Multiplier</label>
+        <input 
+            type="range" 
+            min="1" 
+            max="20" 
+            value={config.xMultiplier}
+            onChange={(e) => handleChange('xMultiplier', parseFloat(e.target.value))}
+        />
+        <span>{config.xMultiplier}</span>
+        </div>
+
+        <div className="control-group">
+        <label>Y Multiplier</label>
+        <input 
+            type="range" 
+            min="1" 
+            max="20" 
+            value={config.yMultiplier}
+            onChange={(e) => handleChange('yMultiplier', parseFloat(e.target.value))}
+        />
+        <span>{config.yMultiplier}</span>
+        </div>
+
+      <div className="control-group">
         <label>Color</label>
         <input 
           type="color" 
@@ -100,6 +126,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({ config, setConfig }) => {
       </div>
     </div>
   )
+
+  
 }
 
 export default ControlPanel 

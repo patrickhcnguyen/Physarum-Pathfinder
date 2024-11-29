@@ -21,6 +21,8 @@ interface Config {
   diffusionRate: number
   resolution: number
   color: string
+  xMultiplier: number
+  yMultiplier: number
 }
 
 interface SimulationState {
@@ -52,7 +54,9 @@ function App() {
     evaporationRate: 0.002,
     diffusionRate: 0.1,
     resolution: 1,
-    color: '#ffffff'
+    color: '#ffffff',
+    xMultiplier: 8,
+    yMultiplier: 4
   })
 
   const [showPanel, setShowPanel] = useState(true)  
@@ -81,8 +85,8 @@ function App() {
     simStateRef.current = {
       particles: Array.from({ length: config.particleCount }, () => {
         return {
-          x: centerX + (Math.random() - 0.5) * radius * 8,
-          y: centerY + (Math.random() - 0.5) * radius * 4,
+          x: centerX + (Math.random() - 0.5) * radius * config.xMultiplier,
+          y: centerY + (Math.random() - 0.5) * radius * config.yMultiplier,
           angle: Math.random() * 2 * Math.PI,
           speed: 2 + Math.random() * 2,
           color: `rgba(255, 255, 255, 0.8)`,
