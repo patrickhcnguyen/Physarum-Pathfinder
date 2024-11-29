@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import ControlPanel from './components/ControlPanel'
 import './App.css'
 
 interface Particle {
@@ -18,22 +19,35 @@ interface Config {
   depositAmount: number
   evaporationRate: number
   diffusionRate: number
+  resolution: number
+  color: string
+}
+
+interface SimulationState {
+  particles: Particle[]
+  trailGrid: number[][]
+  time: number
 }
 
 function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
-
-  const config: Config = {
+  const simStateRef = useRef<SimulationState | null>(null)
+  const animationFrameRef = useRef<number>()
+  
+  const [config, setConfig] = useState<Config>({
     width: window.innerWidth,
     height: window.innerHeight,
-    particleCount: 5000,
+    particleCount: 3000,
     sensorAngle: Math.PI / 4,
     sensorDistance: 15,
-    depositAmount: 30,
-    evaporationRate: 0.003,
-    diffusionRate: 0.1
-  }
+    depositAmount: 40,
+    evaporationRate: 0.002,
+    diffusionRate: 0.1,
+    resolution: 1,
+    color: '#ffffff'
+  })
 
+  // Initialize simulation only once
   useEffect(() => {
     if (!canvasRef.current) return
 
@@ -41,117 +55,154 @@ function App() {
     const ctx = canvas.getContext('2d', { alpha: false })
     if (!ctx) return
 
-    // Set canvas size
-    canvas.width = config.width
-    canvas.height = config.height
+    // Clear any existing animation frame
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+    }
 
-    // Initialize particles with colors
-    let particles: Particle[] = Array.from({ length: config.particleCount }, () => ({
-      x: Math.random() * config.width,
-      y: Math.random() * config.height,
-      angle: Math.random() * 2 * Math.PI,
-      speed: 2 + Math.random() * 2,
-      color: `rgba(255, 255, 255, 0.8)`
-    }))
+    canvas.width = config.width / config.resolution
+    canvas.height = config.height / config.resolution
+    canvas.style.width = `${config.width}px`
+    canvas.style.height = `${config.height}px`
 
-    // Create trail grid
-    let trailGrid: number[][] = Array(config.height).fill(0).map(() => 
-      Array(config.width).fill(0)
-    )
+    const centerX = canvas.width / 2
+    const centerY = canvas.height / 2
+    const radius = 100
+
+    // Reinitialize simulation state
+    simStateRef.current = {
+      particles: Array.from({ length: config.particleCount }, () => {
+        return {
+          x: centerX + (Math.random() - 0.5) * radius * 2,
+          y: centerY + (Math.random() - 0.5) * radius * 2,
+          angle: Math.random() * 2 * Math.PI,
+          speed: 2 + Math.random() * 2,
+          color: `rgba(255, 255, 255, 0.8)`,
+        }
+      }),
+      trailGrid: Array(canvas.height).fill(0).map(() => Array(canvas.width).fill(0)),
+      time: 0
+    }
+
+    const moveCenter = () => {
+      if (!simStateRef.current) return { x: centerX, y: centerY }
+      simStateRef.current.time += 0.01
+      const newCenterX = centerX + Math.sin(simStateRef.current.time) * 200
+      const newCenterY = centerY + Math.cos(simStateRef.current.time * 0.5) * 150
+      return { x: newCenterX, y: newCenterY }
+    }
 
     const sense = (particle: Particle, angleOffset: number): number => {
+      if (!simStateRef.current) return 0
       const sensorAngle = particle.angle + angleOffset
       const sensorX = particle.x + Math.cos(sensorAngle) * config.sensorDistance
       const sensorY = particle.y + Math.sin(sensorAngle) * config.sensorDistance
-      
+
       const gridX = Math.floor(sensorX)
       const gridY = Math.floor(sensorY)
-      
-      if (gridX >= 0 && gridX < config.width && gridY >= 0 && gridY < config.height) {
-        return trailGrid[gridY][gridX]
+
+      if (gridX >= 0 && gridX < canvas.width && gridY >= 0 && gridY < canvas.height) {
+        return simStateRef.current.trailGrid[gridY][gridX]
       }
       return 0
     }
 
-    const diffuseAndEvaporate = (): void => {
-      for (let y = 0; y < config.height; y++) {
-        for (let x = 0; x < config.width; x++) {
-          trailGrid[y][x] *= (1 - config.evaporationRate)
-        }
-      }
-    }
+    const simulate = (): void => {
+      if (!simStateRef.current || !ctx) return
 
-    const updateVisualization = (): void => {
-      // Clear canvas with fade effect
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
-      ctx.fillRect(0, 0, config.width, config.height)
+      const { particles, trailGrid } = simStateRef.current
+      const center = moveCenter()
 
-      // Draw trails
-      const imageData = ctx.getImageData(0, 0, config.width, config.height)
-      const data = imageData.data
-
-      for (let y = 0; y < config.height; y++) {
-        for (let x = 0; x < config.width; x++) {
-          if (trailGrid[y][x] > 0) {
-            const index = (y * config.width + x) * 4
-            const value = Math.min(255, trailGrid[y][x])
-            data[index] = value     // R
-            data[index + 1] = value // G
-            data[index + 2] = value // B
-            data[index + 3] = 255   // A
+      // Update particles
+      particles.forEach((particle) => {
+        const dx = center.x - particle.x
+        const dy = center.y - particle.y
+        const distToCenter = Math.sqrt(dx * dx + dy * dy)
+        
+        if (distToCenter > 100) {
+          if (Math.random() < 0.05) {
+            particle.angle = Math.atan2(dy, dx) + Math.PI + (Math.random() - 0.5) * 2.0
+            particle.speed = 3 + Math.random() * 2
           }
         }
-      }
-      ctx.putImageData(imageData, 0, 0)
-    }
 
-    const simulate = (): void => {
-      particles.forEach(particle => {
         const leftSensor = sense(particle, -config.sensorAngle)
         const frontSensor = sense(particle, 0)
         const rightSensor = sense(particle, config.sensorAngle)
 
         if (frontSensor > leftSensor && frontSensor > rightSensor) {
-          particle.angle += (Math.random() - 0.5) * 0.2
+          particle.angle += (Math.random() - 0.5) * 0.3
         } else if (leftSensor > rightSensor) {
-          particle.angle -= Math.random() * 0.8
+          particle.angle -= Math.random() * 0.4
         } else if (rightSensor > leftSensor) {
-          particle.angle += Math.random() * 0.8
-        } else {
-          particle.angle += (Math.random() - 0.5) * 0.4
+          particle.angle += Math.random() * 0.4
         }
 
-        // Update speed based on sensors
-        const signalStrength = Math.max(leftSensor, frontSensor, rightSensor)
-        particle.speed = 2 + (signalStrength / 255) * 2
+        particle.angle += (Math.random() - 0.5) * 0.1
+
+        particle.speed = 2 + (Math.max(leftSensor, frontSensor, rightSensor) / 255) * 3
+        if (distToCenter > 150) {
+          particle.speed += 0.5 + Math.random()
+        }
 
         particle.x += Math.cos(particle.angle) * particle.speed
         particle.y += Math.sin(particle.angle) * particle.speed
 
-        particle.x = (particle.x + config.width) % config.width
-        particle.y = (particle.y + config.height) % config.height
+        particle.x = (particle.x + canvas.width) % canvas.width
+        particle.y = (particle.y + canvas.height) % canvas.height
 
         const gridX = Math.floor(particle.x)
         const gridY = Math.floor(particle.y)
-        if (gridX >= 0 && gridX < config.width && gridY >= 0 && gridY < config.height) {
+        if (gridX >= 0 && gridX < canvas.width && gridY >= 0 && gridY < canvas.height) {
           trailGrid[gridY][gridX] += config.depositAmount
         }
       })
 
-      updateVisualization()
-      diffuseAndEvaporate()
+      // Update visualization
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
 
-      requestAnimationFrame(simulate)
+      const r = parseInt(config.color.slice(1, 3), 16)
+      const g = parseInt(config.color.slice(3, 5), 16)
+      const b = parseInt(config.color.slice(5, 7), 16)
+
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height)
+      const data = imageData.data
+
+      for (let y = 0; y < canvas.height; y++) {
+        for (let x = 0; x < canvas.width; x++) {
+          if (trailGrid[y][x] > 0) {
+            trailGrid[y][x] *= 1 - config.evaporationRate
+            const index = (y * canvas.width + x) * 4
+            const intensity = Math.min(255, trailGrid[y][x] * 1.5)
+            data[index] = (r * intensity) / 255
+            data[index + 1] = (g * intensity) / 255
+            data[index + 2] = (b * intensity) / 255
+            data[index + 3] = 255
+          }
+        }
+      }
+      
+      ctx.putImageData(imageData, 0, 0)
+      animationFrameRef.current = requestAnimationFrame(simulate)
     }
 
-    const animationFrame = requestAnimationFrame(simulate)
+    animationFrameRef.current = requestAnimationFrame(simulate)
 
-    return () => cancelAnimationFrame(animationFrame)
-  }, [])
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [config]) // Add config as dependency
 
   return (
     <div className="App">
-      <canvas ref={canvasRef} style={{ background: 'black' }}></canvas>
+      <canvas 
+        ref={canvasRef} 
+        style={{ background: 'black' }}
+      />
+      <ControlPanel config={config} setConfig={setConfig} />
     </div>
   )
 }
