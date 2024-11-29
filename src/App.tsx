@@ -81,8 +81,8 @@ function App() {
     simStateRef.current = {
       particles: Array.from({ length: config.particleCount }, () => {
         return {
-          x: centerX + (Math.random() - 0.5) * radius * 2,
-          y: centerY + (Math.random() - 0.5) * radius * 2,
+          x: centerX + (Math.random() - 0.5) * radius * 8,
+          y: centerY + (Math.random() - 0.5) * radius * 4,
           angle: Math.random() * 2 * Math.PI,
           speed: 2 + Math.random() * 2,
           color: `rgba(255, 255, 255, 0.8)`,
@@ -155,10 +155,21 @@ function App() {
 
         particle.x += Math.cos(particle.angle) * particle.speed
         particle.y += Math.sin(particle.angle) * particle.speed
-
-        particle.x = (particle.x + canvas.width) % canvas.width
-        particle.y = (particle.y + canvas.height) % canvas.height
-
+    
+        // Check for border collision and adjust direction
+        if (particle.x <= 0 || particle.x >= canvas.width) {
+          particle.angle = Math.PI - particle.angle + (Math.random() - 0.5) * 0.1  // Reflect and adjust angle
+          particle.x = Math.max(0, Math.min(canvas.width, particle.x))  // Ensure particle stays within bounds
+        }
+        if (particle.y <= 0 || particle.y >= canvas.height) {
+          particle.angle = -particle.angle + (Math.random() - 0.5) * 0.1  // Reflect and adjust angle
+          particle.y = Math.max(0, Math.min(canvas.height, particle.y))  // Ensure particle stays within bounds
+        }
+    
+        // Wrap around logic (optional, if you want particles to reappear on the opposite side)
+        // particle.x = (particle.x + canvas.width) % canvas.width
+        // particle.y = (particle.y + canvas.height) % canvas.height
+    
         const gridX = Math.floor(particle.x)
         const gridY = Math.floor(particle.y)
         if (gridX >= 0 && gridX < canvas.width && gridY >= 0 && gridY < canvas.height) {
