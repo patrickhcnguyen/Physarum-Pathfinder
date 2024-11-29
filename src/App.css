@@ -12,3 +12,9 @@ svg {
   width: 100vw;
   height: 100vh;
 }
+
+.control-panel {
+  transition: transform 0.3s ease-in-out;
+}
+
+

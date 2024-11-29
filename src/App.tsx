@@ -29,6 +29,14 @@ interface SimulationState {
   time: number
 }
 
+function shuffleArray<T>(array: T[]): T[] {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  return array;
+}
+
 function App() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const simStateRef = useRef<SimulationState | null>(null)
@@ -113,6 +121,9 @@ function App() {
       const { particles, trailGrid } = simStateRef.current
       const center = moveCenter()
 
+      // Shuffle particles before processing
+      shuffleArray(particles)
+
       // Update particles
       particles.forEach((particle) => {
         const dx = center.x - particle.x
@@ -133,12 +144,10 @@ function App() {
         if (frontSensor > leftSensor && frontSensor > rightSensor) {
           particle.angle += (Math.random() - 0.5) * 0.3
         } else if (leftSensor > rightSensor) {
-          particle.angle -= Math.random() * 0.4
+          particle.angle -= Math.random() * 0.8
         } else if (rightSensor > leftSensor) {
-          particle.angle += Math.random() * 0.4
+          particle.angle += Math.random() * 0.8
         }
-
-        particle.angle += (Math.random() - 0.5) * 0.1
 
         particle.speed = 2 + (Math.max(leftSensor, frontSensor, rightSensor) / 255) * 3
         if (distToCenter > 150) {
