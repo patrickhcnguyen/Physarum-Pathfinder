@@ -55,9 +55,8 @@ function App() {
     color: '#ffffff'
   })
 
-  const [showPanel, setShowPanel] = useState(true)  // State to track panel visibility
+  const [showPanel, setShowPanel] = useState(true)  
 
-  // Initialize simulation only once
   useEffect(() => {
     if (!canvasRef.current) return
 
@@ -65,7 +64,6 @@ function App() {
     const ctx = canvas.getContext('2d', { alpha: false })
     if (!ctx) return
 
-    // Clear any existing animation frame
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
     }
@@ -126,7 +124,6 @@ function App() {
       // Shuffle particles before processing
       shuffleArray(particles)
 
-      // Update particles
       particles.forEach((particle) => {
         const dx = center.x - particle.x
         const dy = center.y - particle.y
@@ -169,7 +166,6 @@ function App() {
         }
       })
 
-      // Update visualization
       ctx.fillStyle = 'rgba(0, 0, 0, 0.1)'
       ctx.fillRect(0, 0, canvas.width, canvas.height)
 
@@ -205,7 +201,7 @@ function App() {
         cancelAnimationFrame(animationFrameRef.current)
       }
     }
-  }, [config]) // Add config as dependency
+  }, [config]) 
 
   return (
     <div className="App">
